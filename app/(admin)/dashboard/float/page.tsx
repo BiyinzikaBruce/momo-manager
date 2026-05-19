@@ -17,10 +17,11 @@ import Link from "next/link";
 type BankAccount = {
   id: string;
   bankName: string;
-  accountName: string;
   accountNumber: string;
   balance: string;
-  branch: { name: string; currency: string };
+  currency: string;
+  branchId: string;
+  branch: { id: string; name: string; currency: string };
 };
 
 type LineFloat = {
@@ -39,6 +40,177 @@ type BranchGroup = {
   branch: { id: string; name: string; country: string; currency: string };
   lines: LineFloat[];
 };
+
+type Branch = { id: string; name: string; currency: string };
+
+/* ─── Add Bank Account Dialog ─── */
+function AddBankAccountDialog({ existingBranchIds }: { existingBranchIds: string[] }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [branchId, setBranchId] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [balance, setBalance] = useState("");
+
+  const { data: branchesData } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => fetch("/api/branches?limit=100").then((r) => r.json()),
+  });
+  const availableBranches: Branch[] = (branchesData?.branches ?? []).filter(
+    (b: Branch) => !existingBranchIds.includes(b.id)
+  );
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const bal = Number(balance);
+      if (!branchId) throw new Error("Select a branch");
+      if (!bankName.trim()) throw new Error("Bank name is required");
+      if (!accountNumber.trim()) throw new Error("Account number is required");
+      if (isNaN(bal) || bal < 0) throw new Error("Balance must be 0 or more");
+
+      const res = await fetch("/api/bank-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, bankName: bankName.trim(), accountNumber: accountNumber.trim(), balance: bal }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed to create");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Bank account added");
+      qc.invalidateQueries({ queryKey: ["bank-accounts"] });
+      setBranchId(""); setBankName(""); setAccountNumber(""); setBalance("");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="gap-1.5">
+          <i className="ti ti-plus text-[12px]" /> New Account
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Bank Account</DialogTitle>
+          <DialogDescription>Link a bank account to a branch</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Branch</label>
+            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={inputCls + " appearance-none"}>
+              <option value="">Select branch</option>
+              {availableBranches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.currency})</option>
+              ))}
+            </select>
+            {availableBranches.length === 0 && (
+              <p className="text-[11px] text-white/30 mt-1">All branches already have an account</p>
+            )}
+          </div>
+          <div>
+            <label className={labelCls}>Bank Name</label>
+            <input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Stanbic Bank Uganda" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Account Number</label>
+            <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. 1065585745" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Opening Balance</label>
+            <input type="number" min="0" step="any" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0" className={inputCls} />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="flex-1">
+              {mutation.isPending ? "Creating…" : "Add Account"}
+            </Button>
+            <Button variant="secondary" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Edit Bank Account Dialog ─── */
+function EditBankAccountDialog({ account }: { account: BankAccount }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [bankName, setBankName] = useState(account.bankName);
+  const [accountNumber, setAccountNumber] = useState(account.accountNumber);
+  const [topUp, setTopUp] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const topUpNum = topUp !== "" ? Number(topUp) : undefined;
+      if (topUpNum !== undefined && (isNaN(topUpNum) || topUpNum <= 0)) {
+        throw new Error("Top-up amount must be positive");
+      }
+      const res = await fetch(`/api/bank-account/${account.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bankName: bankName.trim() || undefined,
+          accountNumber: accountNumber.trim() || undefined,
+          ...(topUpNum !== undefined ? { topUp: topUpNum } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Update failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Account updated");
+      qc.invalidateQueries({ queryKey: ["bank-accounts"] });
+      setTopUp("");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-white/25 hover:text-[#E040A0] hover:bg-[#E040A0]/10 transition-colors">
+          <i className="ti ti-pencil text-[13px]" />
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Bank Account</DialogTitle>
+          <DialogDescription>{account.branch.name}</DialogDescription>
+        </DialogHeader>
+        <div className="p-4 rounded-[12px] border border-white/8 bg-white/4 mb-5">
+          <p className="text-xs text-white/40 mb-1">Current Balance</p>
+          <p className="text-2xl font-extrabold text-white">
+            {account.branch.currency} {formatNumber(Number(account.balance))}
+          </p>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Bank Name</label>
+            <input value={bankName} onChange={(e) => setBankName(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Account Number</label>
+            <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Add Funds (Top Up)</label>
+            <input type="number" min="0" step="any" value={topUp} onChange={(e) => setTopUp(e.target.value)} placeholder="Leave empty to skip" className={inputCls} />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="flex-1">
+              {mutation.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+            <Button variant="secondary" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const OPERATOR_LABELS: Record<string, string> = {
   MTN_UG:       "MTN Uganda",
@@ -235,15 +407,26 @@ export default function FloatPage() {
       </div>
 
       {/* Bank Accounts */}
-      {!loadingAccounts && accountsData.length > 0 && (
-        <GlassCard className="mb-6">
-          <h2 className="text-sm font-bold text-white mb-4">Bank Accounts</h2>
+      <GlassCard className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-white">Bank Accounts</h2>
+          <AddBankAccountDialog existingBranchIds={accountsData.map((a) => a.branchId)} />
+        </div>
+        {loadingAccounts ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-white/4 rounded-[12px] animate-pulse" />
+            ))}
+          </div>
+        ) : accountsData.length === 0 ? (
+          <p className="text-sm text-white/30 text-center py-4">No bank accounts yet</p>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {accountsData.map((acc) => (
-              <div key={acc.id} className="p-4 bg-white/4 rounded-[12px] border border-white/6">
+              <div key={acc.id} className="relative p-4 bg-white/4 rounded-[12px] border border-white/6">
+                <EditBankAccountDialog account={acc} />
                 <p className="text-xs text-white/40 mb-1">{acc.branch.name}</p>
-                <p className="text-sm font-bold text-white truncate">{acc.bankName}</p>
-                <p className="text-xs text-white/50 truncate">{acc.accountName}</p>
+                <p className="text-sm font-bold text-white truncate pr-8">{acc.bankName}</p>
                 <p className="font-mono text-xs text-white/35 mt-1">{acc.accountNumber}</p>
                 <p className="text-base font-extrabold text-[#E040A0] mt-2">
                   {acc.branch.currency} {formatNumber(Number(acc.balance))}
@@ -251,8 +434,8 @@ export default function FloatPage() {
               </div>
             ))}
           </div>
-        </GlassCard>
-      )}
+        )}
+      </GlassCard>
 
       {/* Per-branch accordion */}
       {loadingFloat ? (

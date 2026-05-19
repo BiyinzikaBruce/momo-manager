@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 
 const navItems = [
   { href: "/dashboard",              label: "Dashboard",     icon: "ti-layout-dashboard" },
@@ -84,7 +85,10 @@ export function AdminSidebar() {
       </nav>
 
       {/* User section */}
-      <div className="px-3 py-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="px-3 py-3 border-t space-y-0.5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-1 px-1 pb-1">
+          <NotificationBell />
+        </div>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-[10px] text-[13px] font-medium text-white/55 hover:bg-white/5 hover:text-white/85 transition-all duration-150"

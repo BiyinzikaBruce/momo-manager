@@ -5,6 +5,9 @@ import { getCachedOrFetch, invalidateTag, cacheKey, tags } from "@/lib/cache";
 import { z } from "zod";
 import { randomBytes, scryptSync } from "crypto";
 import { randomUUID } from "crypto";
+import { sendEmail } from "@/lib/email";
+import WelcomeEmail from "@/emails/welcome";
+import React from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -108,5 +111,19 @@ export async function POST(req: NextRequest) {
   });
 
   await invalidateTag(tags.users);
+
+  // Welcome email (fire-and-forget — don't block the response)
+  sendEmail({
+    to: email,
+    subject: "Welcome to MoMo Manager — your account is ready",
+    react: React.createElement(WelcomeEmail, {
+      name,
+      email,
+      password,
+      role,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    }),
+  });
+
   return NextResponse.json(user, { status: 201 });
 }

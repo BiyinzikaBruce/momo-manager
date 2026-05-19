@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { requireRole, requireSession } from "@/lib/auth-guard";
 import { getCachedOrFetch, invalidateTag, cacheKey, tags } from "@/lib/cache";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import LowFloatAlert from "@/emails/low-float-alert";
+import React from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -170,17 +173,40 @@ export async function POST(req: NextRequest) {
     data: { balance: newBalance },
   });
 
-  // Check low-float threshold and create alert if breached
+  // Check low-float threshold — create notification + email if breached
   const threshold = line.float?.lowThreshold ? Number(line.float.lowThreshold) : null;
   if (threshold !== null && newBalance < threshold) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
     await db.notification.create({
       data: {
         branchId: user.branchId,
         type: "LOW_FLOAT",
         title: `Low Float: ${line.operator}`,
-        message: `Float for ${line.operator} at branch is below threshold. Current: ${newBalance.toLocaleString()}, Threshold: ${threshold.toLocaleString()}.`,
+        message: `Float for ${line.operator} is below threshold. Current: ${newBalance.toLocaleString()}, Threshold: ${threshold.toLocaleString()}.`,
       },
-    }).catch(() => {}); // Non-critical — don't fail the transaction
+    }).catch(() => {});
+
+    // Email the branch manager
+    const manager = await db.user.findFirst({
+      where: { branchId: user.branchId!, role: "MANAGER" },
+      select: { email: true },
+    }).catch(() => null);
+
+    if (manager) {
+      sendEmail({
+        to: manager.email,
+        subject: `⚠️ Low Float Alert — ${line.operator.replace("_", " ")}`,
+        react: React.createElement(LowFloatAlert, {
+          branchName: tx.branch.name,
+          operator: line.operator,
+          currentBalance: newBalance,
+          threshold,
+          currency: tx.branch.currency,
+          appUrl,
+        }),
+      });
+    }
   }
 
   // Invalidate relevant caches

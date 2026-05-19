@@ -6,3 +6,249 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ===== ENUMS =====
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+enum MobileOperator {
+  MTN_UG
+  AIRTEL_UG
+  VODACOM_TZ
+  TIGO_TZ
+  SAFARICOM_KE
+  AIRTEL_KE
+  ORANGE_CD
+  VODACOM_CD
+  AIRTEL_CD
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+enum RateType {
+  PERCENTAGE
+  FLAT
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum NotificationType {
+  LOW_FLOAT
+  DAILY_REPORT
+  SYSTEM
+  WELCOME
+}
+
+// ===== BRANCH =====
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  country   String
+  city      String
+  address   String?
+  currency  String   @default("UGX")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         user[]
+  mobileLines   MobileLine[]
+  bankAccount   BankAccount?
+  shifts        Shift[]
+  transactions  Transaction[]
+  notifications Notification[]
+}
+
+// ===== BETTER AUTH MODELS (lowercase names required by Better Auth) =====
+
+model user {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  role     String  @default("CASHIER")
+  branchId String?
+  isActive Boolean @default(true)
+
+  branch        Branch?        @relation(fields: [branchId], references: [id])
+  sessions      session[]
+  accounts      account[]
+  shifts        Shift[]
+  transactions  Transaction[]
+  notifications Notification[]
+}
+
+model session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime
+  updatedAt DateTime
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+}
+
+// ===== MOBILE MONEY MODELS =====
+
+model MobileLine {
+  id        String         @id @default(cuid())
+  operator  MobileOperator
+  branchId  String
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  branch         Branch              @relation(fields: [branchId], references: [id])
+  feeRates       FeeRate[]
+  float          LineFloat?
+  transactions   Transaction[]
+  shiftSnapshots ShiftLineSnapshot[]
+
+  @@unique([operator, branchId])
+}
+
+model FeeRate {
+  id              String          @id @default(cuid())
+  mobileLineId    String
+  transactionType TransactionType
+  rateType        RateType
+  rate            Decimal         @db.Decimal(10, 4)
+  minFee          Decimal?        @db.Decimal(20, 2)
+  maxFee          Decimal?        @db.Decimal(20, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  mobileLine MobileLine @relation(fields: [mobileLineId], references: [id])
+
+  @@unique([mobileLineId, transactionType])
+}
+
+model LineFloat {
+  id           String     @id @default(cuid())
+  mobileLineId String     @unique
+  balance      Decimal    @db.Decimal(20, 2)
+  lowThreshold Decimal?   @db.Decimal(20, 2)
+  updatedAt    DateTime   @updatedAt
+
+  mobileLine MobileLine @relation(fields: [mobileLineId], references: [id])
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  branchId      String   @unique
+  bankName      String
+  accountNumber String
+  balance       Decimal  @db.Decimal(20, 2)
+  currency      String   @default("UGX")
+  updatedAt     DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+}
+
+model Shift {
+  id        String      @id @default(cuid())
+  cashierId String
+  branchId  String
+  status    ShiftStatus @default(OPEN)
+  openedAt  DateTime    @default(now())
+  closedAt  DateTime?
+  notes     String?
+
+  cashier       user                @relation(fields: [cashierId], references: [id])
+  branch        Branch              @relation(fields: [branchId], references: [id])
+  transactions  Transaction[]
+  lineSnapshots ShiftLineSnapshot[]
+}
+
+model ShiftLineSnapshot {
+  id             String   @id @default(cuid())
+  shiftId        String
+  mobileLineId   String
+  openingBalance Decimal  @db.Decimal(20, 2)
+  closingBalance Decimal? @db.Decimal(20, 2)
+
+  shift      Shift      @relation(fields: [shiftId], references: [id])
+  mobileLine MobileLine @relation(fields: [mobileLineId], references: [id])
+
+  @@unique([shiftId, mobileLineId])
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  shiftId       String
+  mobileLineId  String
+  branchId      String
+  cashierId     String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(20, 2)
+  fee           Decimal         @db.Decimal(20, 2)
+  customerName  String?
+  customerPhone String?
+  reference     String?
+  createdAt     DateTime        @default(now())
+
+  shift      Shift      @relation(fields: [shiftId], references: [id])
+  mobileLine MobileLine @relation(fields: [mobileLineId], references: [id])
+  branch     Branch     @relation(fields: [branchId], references: [id])
+  cashier    user       @relation(fields: [cashierId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String?
+  branchId  String?
+  type      NotificationType
+  title     String?
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user   user?   @relation(fields: [userId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+}

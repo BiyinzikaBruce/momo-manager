@@ -38,12 +38,11 @@ export function AdminSidebar() {
       {/* Brand */}
       <div className="px-5 py-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #E040A0 0%, #FF6B35 100%)" }}
-          >
-            <span className="text-white font-extrabold text-sm">M</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Tech Power Africa"
+            className="w-8 h-8 rounded-xl flex-shrink-0 object-cover"
+          />
           <div>
             <p className="text-sm font-bold text-white leading-tight">MoMo Manager</p>
             <p className="text-[10px] text-white/40">Admin</p>

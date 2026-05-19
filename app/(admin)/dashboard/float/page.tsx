@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { GlassCard, GradientCard } from "@/components/ui/gradient-card";
 import { MobileLineBadge } from "@/components/ui/mobile-line-badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogTrigger, DialogContent,
+  DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { formatNumber } from "@/lib/utils";
 import Link from "next/link";
 
@@ -33,6 +39,147 @@ type BranchGroup = {
   branch: { id: string; name: string; country: string; currency: string };
   lines: LineFloat[];
 };
+
+const OPERATOR_LABELS: Record<string, string> = {
+  MTN_UG:       "MTN Uganda",
+  AIRTEL_UG:    "Airtel Uganda",
+  VODACOM_TZ:   "Vodacom Tanzania",
+  TIGO_TZ:      "Tigo Tanzania",
+  SAFARICOM_KE: "Safaricom M-Pesa",
+  AIRTEL_KE:    "Airtel Kenya",
+  ORANGE_CD:    "Orange Congo",
+  VODACOM_CD:   "Vodacom Congo",
+  AIRTEL_CD:    "Airtel Congo",
+};
+
+const inputCls =
+  "w-full bg-white/5 border border-white/10 rounded-[10px] px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#E040A0]/50 focus:ring-1 focus:ring-[#E040A0]/30 transition-all";
+const labelCls = "block text-xs font-medium text-white/60 mb-1.5";
+
+function EditFloatDialog({ line, currency }: { line: LineFloat; currency: string }) {
+  const qc = useQueryClient();
+  const [topUp, setTopUp] = useState("");
+  const [threshold, setThreshold] = useState(
+    line.lowThreshold !== null ? String(Number(line.lowThreshold)) : ""
+  );
+  const [open, setOpen] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const topUpNum = topUp !== "" ? Number(topUp) : undefined;
+      const thrNum = threshold !== "" ? Number(threshold) : null;
+
+      if (topUpNum !== undefined && (isNaN(topUpNum) || topUpNum <= 0)) {
+        throw new Error("Top-up amount must be a positive number");
+      }
+
+      const res = await fetch(`/api/float/${line.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(topUpNum !== undefined ? { topUp: topUpNum } : {}),
+          ...(threshold !== "" ? { lowThreshold: thrNum ?? 0 } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Update failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Float updated");
+      qc.invalidateQueries({ queryKey: ["float"] });
+      setTopUp("");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bal = Number(line.balance);
+  const thr = line.lowThreshold !== null ? Number(line.lowThreshold) : null;
+  const isLow = thr !== null && bal < thr;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="ml-2 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-white/30 hover:text-[#E040A0] hover:bg-[#E040A0]/10 transition-colors">
+          <i className="ti ti-pencil text-[13px]" />
+        </button>
+      </DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Float</DialogTitle>
+          <DialogDescription>
+            {OPERATOR_LABELS[line.mobileLine.operator] ?? line.mobileLine.operator} · {line.mobileLine.branch.name}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Current balance display */}
+        <div className={`p-4 rounded-[12px] border mb-5 ${isLow ? "border-red-400/30 bg-red-400/5" : "border-white/8 bg-white/4"}`}>
+          <p className="text-xs text-white/40 mb-1">Current Balance</p>
+          <p className={`text-2xl font-extrabold ${isLow ? "text-red-400" : "text-white"}`}>
+            {currency} {formatNumber(bal)}
+          </p>
+          {isLow && (
+            <p className="text-xs text-red-400 mt-1">
+              Below threshold ({currency} {formatNumber(thr!)})
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Add Funds (Top Up)</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={topUp}
+              onChange={(e) => setTopUp(e.target.value)}
+              placeholder={`e.g. 500,000`}
+              className={inputCls}
+            />
+            <p className="text-[11px] text-white/30 mt-1">
+              Leave empty to keep current balance
+            </p>
+          </div>
+
+          <div>
+            <label className={labelCls}>Low Float Threshold</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder={thr !== null ? String(thr) : "Not set"}
+              className={inputCls}
+            />
+            <p className="text-[11px] text-white/30 mt-1">
+              Alert will trigger when balance falls below this
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending || (topUp === "" && threshold === "")}
+              className="flex-1"
+            >
+              {mutation.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function FloatPage() {
   const [openBranch, setOpenBranch] = useState<string | null>(null);
@@ -184,6 +331,7 @@ export default function FloatPage() {
                                 </p>
                               )}
                             </div>
+                            <EditFloatDialog line={f} currency={group.branch.currency} />
                           </div>
                         );
                       })}

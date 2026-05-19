@@ -58,6 +58,19 @@
   --shadow-glow-pink: 0 0 40px rgba(224, 64, 160, 0.2);
   --shadow-glow-orange: 0 0 40px rgba(255, 107, 53, 0.15);
 
+  /* === SHADCN COMPAT (used by JB DataTable / Select / DropdownMenu) === */
+  --color-popover: #13131A;
+  --color-popover-foreground: #FFFFFF;
+  --color-card: #13131A;
+  --color-card-foreground: #FFFFFF;
+  --color-muted: rgba(255, 255, 255, 0.06);
+  --color-input: rgba(255, 255, 255, 0.10);
+  --color-ring: #E040A0;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+  --color-secondary: rgba(255, 255, 255, 0.06);
+  --color-secondary-foreground: #FFFFFF;
+
   /* === FONT === */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 

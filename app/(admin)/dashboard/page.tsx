@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/gradient-card";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminDashboard() {
   return (
     <>

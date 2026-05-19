@@ -1,0 +1,16 @@
+allowBuilds:
+  '@prisma/engines': true
+  esbuild: true
+  msw: true
+  prisma: true
+  sharp: true
+  ttf2woff2: true
+  unrs-resolver: true
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - esbuild
+  - msw
+  - prisma
+  - sharp
+  - ttf2woff2
+  - unrs-resolver

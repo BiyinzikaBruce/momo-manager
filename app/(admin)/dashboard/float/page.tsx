@@ -44,7 +44,7 @@ type BranchGroup = {
 type Branch = { id: string; name: string; currency: string };
 
 /* ─── Add Bank Account Dialog ─── */
-function AddBankAccountDialog({ existingBranchIds }: { existingBranchIds: string[] }) {
+function AddBankAccountDialog() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [branchId, setBranchId] = useState("");
@@ -56,9 +56,7 @@ function AddBankAccountDialog({ existingBranchIds }: { existingBranchIds: string
     queryKey: ["branches"],
     queryFn: () => fetch("/api/branches?limit=100").then((r) => r.json()),
   });
-  const availableBranches: Branch[] = (branchesData?.branches ?? []).filter(
-    (b: Branch) => !existingBranchIds.includes(b.id)
-  );
+  const availableBranches: Branch[] = branchesData?.branches ?? [];
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -100,15 +98,12 @@ function AddBankAccountDialog({ existingBranchIds }: { existingBranchIds: string
         <div className="space-y-4">
           <div>
             <label className={labelCls}>Branch</label>
-            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={inputCls + " appearance-none"}>
+            <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28]"}>
               <option value="">Select branch</option>
               {availableBranches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name} ({b.currency})</option>
               ))}
             </select>
-            {availableBranches.length === 0 && (
-              <p className="text-[11px] text-white/30 mt-1">All branches already have an account</p>
-            )}
           </div>
           <div>
             <label className={labelCls}>Bank Name</label>
@@ -410,7 +405,7 @@ export default function FloatPage() {
       <GlassCard className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-white">Bank Accounts</h2>
-          <AddBankAccountDialog existingBranchIds={accountsData.map((a) => a.branchId)} />
+          <AddBankAccountDialog />
         </div>
         {loadingAccounts ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

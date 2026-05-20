@@ -70,7 +70,7 @@ export default function NewBranchPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Country</label>
-              <select {...register("country")} className={inputCls + " appearance-none"}>
+              <select {...register("country")} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28]"}>
                 <option value="">Select country</option>
                 <option value="Uganda">Uganda</option>
                 <option value="Kenya">Kenya</option>
@@ -81,7 +81,7 @@ export default function NewBranchPage() {
             </div>
             <div>
               <label className={labelCls}>Currency</label>
-              <select {...register("currency")} className={inputCls + " appearance-none"}>
+              <select {...register("currency")} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28]"}>
                 <option value="">Select currency</option>
                 <option value="UGX">UGX — Ugandan Shilling</option>
                 <option value="KES">KES — Kenyan Shilling</option>

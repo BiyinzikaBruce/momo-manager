@@ -1,13 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { GlassCard } from "@/components/ui/gradient-card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { MobileLineBadge } from "@/components/ui/mobile-line-badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { formatNumber } from "@/lib/utils";
 
 type MobileLine = {
@@ -18,6 +23,139 @@ type MobileLine = {
   float: { balance: string; lowThreshold: string | null } | null;
   feeRates: { transactionType: string; rateType: string; rate: string }[];
 };
+
+const OPERATORS = [
+  { value: "MTN_UG",       label: "MTN Uganda" },
+  { value: "AIRTEL_UG",    label: "Airtel Uganda" },
+  { value: "VODACOM_TZ",   label: "Vodacom Tanzania" },
+  { value: "TIGO_TZ",      label: "Tigo Tanzania" },
+  { value: "SAFARICOM_KE", label: "Safaricom M-Pesa" },
+  { value: "AIRTEL_KE",    label: "Airtel Kenya" },
+  { value: "ORANGE_CD",    label: "Orange Congo" },
+  { value: "VODACOM_CD",   label: "Vodacom Congo" },
+  { value: "AIRTEL_CD",    label: "Airtel Congo" },
+];
+
+const inputCls = "w-full bg-white/5 border border-white/10 rounded-[10px] px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#E040A0]/50 focus:ring-1 focus:ring-[#E040A0]/30 transition-all";
+const labelCls = "block text-xs font-medium text-white/60 mb-1.5";
+
+function NewLineDialog() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [branchId, setBranchId] = useState("");
+  const [operator, setOperator] = useState("");
+  const [openingBalance, setOpeningBalance] = useState("");
+  const [lowThreshold, setLowThreshold] = useState("");
+
+  const { data: branchesData } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => fetch("/api/branches?limit=100").then((r) => r.json()),
+  });
+  const branches: { id: string; name: string; currency: string }[] = branchesData?.branches ?? [];
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!branchId) throw new Error("Select a branch");
+      if (!operator) throw new Error("Select an operator");
+      const bal = openingBalance !== "" ? Number(openingBalance) : 0;
+      const thr = lowThreshold !== "" ? Number(lowThreshold) : null;
+      if (isNaN(bal) || bal < 0) throw new Error("Opening balance must be 0 or more");
+
+      const res = await fetch("/api/mobile-lines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, operator, openingBalance: bal, lowThreshold: thr }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed to create");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Mobile line added");
+      qc.invalidateQueries({ queryKey: ["mobile-lines"] });
+      qc.invalidateQueries({ queryKey: ["float"] });
+      setBranchId(""); setOperator(""); setOpeningBalance(""); setLowThreshold("");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+        <i className="ti ti-plus text-[12px]" /> New Line
+      </Button>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Mobile Line</DialogTitle>
+          <DialogDescription>Add a new operator line to a branch with default fee rates</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Branch</label>
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              style={{ colorScheme: "dark" }}
+              className={inputCls + " appearance-none bg-[#1c1c28]"}
+            >
+              <option value="">Select branch</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.currency})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Operator</label>
+            <select
+              value={operator}
+              onChange={(e) => setOperator(e.target.value)}
+              style={{ colorScheme: "dark" }}
+              className={inputCls + " appearance-none bg-[#1c1c28]"}
+            >
+              <option value="">Select operator</option>
+              {OPERATORS.map((op) => (
+                <option key={op.value} value={op.value}>{op.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Opening Balance</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={openingBalance}
+              onChange={(e) => setOpeningBalance(e.target.value)}
+              placeholder="0"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Low Float Threshold (optional)</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={lowThreshold}
+              onChange={(e) => setLowThreshold(e.target.value)}
+              placeholder="Leave empty to disable alert"
+              className={inputCls}
+            />
+          </div>
+          <p className="text-[11px] text-white/30">
+            Default fee rates will be applied automatically based on the operator.
+          </p>
+          <div className="flex gap-3 pt-1">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="flex-1">
+              {mutation.isPending ? "Creating…" : "Add Line"}
+            </Button>
+            <Button variant="secondary" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const columns: ColumnDef<MobileLine, unknown>[] = [
   {
@@ -107,7 +245,9 @@ export default function MobileLinesPage() {
 
   return (
     <>
-      <PageHeader title="Mobile Lines" breadcrumb="Admin" />
+      <PageHeader title="Mobile Lines" breadcrumb="Admin">
+        <NewLineDialog />
+      </PageHeader>
 
       <GlassCard>
         {isLoading ? (

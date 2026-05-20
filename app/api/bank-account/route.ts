@@ -45,12 +45,6 @@ export async function POST(req: NextRequest) {
 
   const { branchId, bankName, accountNumber, balance } = parsed.data;
 
-  // Each branch can only have one bank account
-  const existing = await db.bankAccount.findUnique({ where: { branchId } });
-  if (existing) {
-    return NextResponse.json({ error: "This branch already has a bank account" }, { status: 409 });
-  }
-
   const branch = await db.branch.findUnique({ where: { id: branchId }, select: { currency: true } });
   if (!branch) return NextResponse.json({ error: "Branch not found" }, { status: 404 });
 

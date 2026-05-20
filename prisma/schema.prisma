@@ -65,7 +65,7 @@ model Branch {
 
   users         user[]
   mobileLines   MobileLine[]
-  bankAccount   BankAccount?
+  bankAccounts  BankAccount[]
   shifts        Shift[]
   transactions  Transaction[]
   notifications Notification[]
@@ -181,7 +181,7 @@ model LineFloat {
 
 model BankAccount {
   id            String   @id @default(cuid())
-  branchId      String   @unique
+  branchId      String
   bankName      String
   accountNumber String
   balance       Decimal  @db.Decimal(20, 2)

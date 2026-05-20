@@ -104,7 +104,7 @@ export default function EditUserPage() {
 
             <div>
               <label className={labelCls}>Role</label>
-              <select {...register("role")} className={inputCls + " appearance-none"}>
+              <select {...register("role")} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28]"}>
                 <option value="CASHIER">Cashier</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
@@ -114,7 +114,7 @@ export default function EditUserPage() {
             {role !== "ADMIN" && (
               <div>
                 <label className={labelCls}>Branch</label>
-                <select {...register("branchId")} className={inputCls + " appearance-none"}>
+                <select {...register("branchId")} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28]"}>
                   <option value="">No branch assigned</option>
                   {branches.map((b: { id: string; name: string; country: string }) => (
                     <option key={b.id} value={b.id}>

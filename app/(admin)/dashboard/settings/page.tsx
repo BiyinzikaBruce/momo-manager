@@ -30,7 +30,8 @@ const labelCls = "block text-xs font-medium text-white/60 mb-1.5";
 function EditThresholdDialog({ f }: { f: LineFloat }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [topUp, setTopUp] = useState("");
+  const [mode, setMode] = useState<"topup" | "set">("topup");
+  const [amount, setAmount] = useState("");
   const [threshold, setThreshold] = useState(
     f.lowThreshold !== null ? String(Number(f.lowThreshold)) : ""
   );
@@ -41,12 +42,13 @@ function EditThresholdDialog({ f }: { f: LineFloat }) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const topUpNum = topUp !== "" ? Number(topUp) : undefined;
-      if (topUpNum !== undefined && (isNaN(topUpNum) || topUpNum <= 0)) {
-        throw new Error("Top-up must be a positive number");
-      }
+      const amtNum = amount !== "" ? Number(amount) : undefined;
+      if (amtNum !== undefined && isNaN(amtNum)) throw new Error("Invalid amount");
+      if (mode === "topup" && amtNum !== undefined && amtNum <= 0) throw new Error("Top-up must be positive");
+      if (mode === "set" && amtNum !== undefined && amtNum < 0) throw new Error("Balance cannot be negative");
+
       const body: Record<string, unknown> = {};
-      if (topUpNum !== undefined) body.topUp = topUpNum;
+      if (amtNum !== undefined) body[mode === "topup" ? "topUp" : "balance"] = amtNum;
       if (threshold !== "") body.lowThreshold = Number(threshold);
       else body.lowThreshold = null;
 
@@ -63,7 +65,7 @@ function EditThresholdDialog({ f }: { f: LineFloat }) {
     onSuccess: () => {
       toast.success("Line updated");
       qc.invalidateQueries({ queryKey: ["float"] });
-      setTopUp("");
+      setAmount("");
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -103,15 +105,31 @@ function EditThresholdDialog({ f }: { f: LineFloat }) {
         </div>
 
         <div className="space-y-4">
+          {/* Mode toggle */}
+          <div className="flex gap-2">
+            {(["topup", "set"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => { setMode(m); setAmount(""); }}
+                className={`flex-1 py-2 rounded-[10px] text-xs font-bold transition-colors border ${
+                  mode === m
+                    ? "bg-[#E040A0]/15 border-[#E040A0]/40 text-[#E040A0]"
+                    : "bg-white/4 border-white/10 text-white/40 hover:text-white/60"
+                }`}
+              >
+                {m === "topup" ? "Add Funds (Top Up)" : "Set Balance Directly"}
+              </button>
+            ))}
+          </div>
           <div>
-            <label className={labelCls}>Add Funds (Top Up)</label>
+            <label className={labelCls}>{mode === "topup" ? "Amount to Add" : "New Balance"}</label>
             <input
               type="number"
               min="0"
               step="any"
-              value={topUp}
-              onChange={(e) => setTopUp(e.target.value)}
-              placeholder="Leave empty to skip"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={mode === "topup" ? "Leave empty to skip" : "Enter exact balance"}
               className={inputCls}
             />
           </div>

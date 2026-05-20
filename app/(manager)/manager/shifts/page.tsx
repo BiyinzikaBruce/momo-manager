@@ -104,7 +104,7 @@ export default function ManagerShiftsPage() {
         <div className="flex gap-3 items-end">
           <div>
             <p className="text-xs text-white/40 mb-1.5">Status</p>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls + " min-w-[130px]"}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ colorScheme: "dark" }} className={inputCls + " appearance-none bg-[#1c1c28] min-w-[130px]"}>
               <option value="">All</option>
               <option value="OPEN">Open</option>
               <option value="CLOSED">Closed</option>

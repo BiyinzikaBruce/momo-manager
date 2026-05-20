@@ -68,7 +68,8 @@ export default function ManagerReportsPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className={inputCls + " appearance-none min-w-[140px]"}
+              style={{ colorScheme: "dark" }}
+              className={inputCls + " appearance-none bg-[#1c1c28] min-w-[140px]"}
             >
               <option value="">All types</option>
               <option value="DEPOSIT">Deposit</option>

@@ -128,7 +128,8 @@ export default function CashierTransactionsPage() {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className={inputCls + " min-w-[140px]"}
+                  style={{ colorScheme: "dark" }}
+                  className={inputCls + " appearance-none bg-[#1c1c28] min-w-[140px]"}
                 >
                   <option value="">All types</option>
                   <option value="DEPOSIT">Deposit</option>

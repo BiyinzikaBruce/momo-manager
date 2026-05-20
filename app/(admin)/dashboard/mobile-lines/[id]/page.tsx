@@ -147,7 +147,8 @@ export default function MobileLineDetailPage() {
                       onChange={(e) =>
                         setRates((prev) => ({ ...prev, [type]: { ...prev[type], rateType: e.target.value as never } }))
                       }
-                      className={inputCls + " appearance-none"}
+                      style={{ colorScheme: "dark" }}
+                      className={inputCls + " appearance-none bg-[#1c1c28]"}
                     >
                       <option value="PERCENTAGE">Percentage (%)</option>
                       <option value="FLAT">Flat Amount</option>

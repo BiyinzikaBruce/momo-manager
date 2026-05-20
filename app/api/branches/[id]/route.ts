@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       include: {
         mobileLines: { include: { float: true } },
-        bankAccount: user.role === "ADMIN" ? true : false,
+        bankAccounts: user.role === "ADMIN" ? true : false,
         _count: { select: { users: true, shifts: true, transactions: true } },
       },
     }), 120);

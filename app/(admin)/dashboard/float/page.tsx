@@ -33,6 +33,7 @@ type LineFloat = {
     operator: string;
     branchId: string;
     branch: { id: string; name: string; country: string; currency: string };
+    bankAccount: { id: string; bankName: string; accountNumber: string; balance: string } | null;
   };
 };
 
@@ -305,9 +306,17 @@ function EditFloatDialog({ line, currency }: { line: LineFloat; currency: string
               placeholder={`e.g. 500,000`}
               className={inputCls}
             />
-            <p className="text-[11px] text-white/30 mt-1">
-              Leave empty to keep current balance
-            </p>
+            {line.mobileLine.bankAccount ? (
+              <p className="text-[11px] text-[#E040A0]/70 mt-1">
+                <i className="ti ti-building-bank mr-1" />
+                Will debit {line.mobileLine.bankAccount.bankName} (available:{" "}
+                {currency} {formatNumber(Number(line.mobileLine.bankAccount.balance))})
+              </p>
+            ) : (
+              <p className="text-[11px] text-white/30 mt-1">
+                Leave empty to keep current balance
+              </p>
+            )}
           </div>
 
           <div>
@@ -488,8 +497,14 @@ export default function FloatPage() {
                           >
                             <MobileLineBadge operator={f.mobileLine.operator as never} />
                             <div className="flex-1 min-w-0">
+                              {f.mobileLine.bankAccount && (
+                                <p className="text-[10px] text-white/40 truncate mb-1">
+                                  <i className="ti ti-building-bank mr-1" />
+                                  {f.mobileLine.bankAccount.bankName}
+                                </p>
+                              )}
                               {thr !== null && (
-                                <div className="w-full bg-white/8 rounded-full h-1.5 mt-1">
+                                <div className="w-full bg-white/8 rounded-full h-1.5">
                                   <div
                                     className={`h-1.5 rounded-full transition-all ${
                                       isLow ? "bg-red-400" : "bg-green-400"

@@ -47,8 +47,9 @@ export async function GET(req: NextRequest) {
 }
 
 const CreateSchema = z.object({
-  branchId: z.string().min(1, "Branch is required"),
-  operator: z.enum(OPERATORS, { required_error: "Operator is required" }),
+  branchId:      z.string().min(1, "Branch is required"),
+  operator:      z.enum(OPERATORS, { required_error: "Operator is required" }),
+  bankAccountId: z.string().optional().nullable(),
   openingBalance: z.number().min(0).default(0),
   lowThreshold:   z.number().min(0).nullable().default(null),
 });
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { branchId, operator, openingBalance, lowThreshold } = parsed.data;
+  const { branchId, operator, bankAccountId, openingBalance, lowThreshold } = parsed.data;
 
   const branch = await db.branch.findUnique({ where: { id: branchId } });
   if (!branch) return NextResponse.json({ error: "Branch not found" }, { status: 404 });
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
 
   const [line] = await db.$transaction([
     db.mobileLine.create({
-      data: { id: lineId, branchId, operator },
+      data: { id: lineId, branchId, operator, ...(bankAccountId ? { bankAccountId } : {}) },
       include: {
         branch: { select: { id: true, name: true, country: true, currency: true } },
         float: true,

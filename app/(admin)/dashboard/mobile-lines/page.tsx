@@ -44,6 +44,7 @@ function NewLineDialog() {
   const [open, setOpen] = useState(false);
   const [branchId, setBranchId] = useState("");
   const [operator, setOperator] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [openingBalance, setOpeningBalance] = useState("");
   const [lowThreshold, setLowThreshold] = useState("");
 
@@ -52,6 +53,14 @@ function NewLineDialog() {
     queryFn: () => fetch("/api/branches?limit=100").then((r) => r.json()),
   });
   const branches: { id: string; name: string; currency: string }[] = branchesData?.branches ?? [];
+
+  const { data: bankAccountsData } = useQuery({
+    queryKey: ["bank-accounts", branchId],
+    queryFn: () => fetch(`/api/bank-account?branchId=${branchId}`).then((r) => r.json()),
+    enabled: !!branchId,
+  });
+  const bankAccounts: { id: string; bankName: string; accountNumber: string; balance: string }[] =
+    bankAccountsData ?? [];
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -64,7 +73,11 @@ function NewLineDialog() {
       const res = await fetch("/api/mobile-lines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branchId, operator, openingBalance: bal, lowThreshold: thr }),
+        body: JSON.stringify({
+          branchId, operator,
+          bankAccountId: bankAccountId || null,
+          openingBalance: bal, lowThreshold: thr,
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed to create");
       return res.json();
@@ -73,7 +86,7 @@ function NewLineDialog() {
       toast.success("Mobile line added");
       qc.invalidateQueries({ queryKey: ["mobile-lines"] });
       qc.invalidateQueries({ queryKey: ["float"] });
-      setBranchId(""); setOperator(""); setOpeningBalance(""); setLowThreshold("");
+      setBranchId(""); setOperator(""); setBankAccountId(""); setOpeningBalance(""); setLowThreshold("");
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -117,6 +130,26 @@ function NewLineDialog() {
                 <option key={op.value} value={op.value}>{op.label}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={labelCls}>Bank Account (optional)</label>
+            <select
+              value={bankAccountId}
+              onChange={(e) => setBankAccountId(e.target.value)}
+              disabled={!branchId}
+              style={{ colorScheme: "dark" }}
+              className={inputCls + " appearance-none bg-[#1c1c28]"}
+            >
+              <option value="">No bank account linked</option>
+              {bankAccounts.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.bankName} · {b.accountNumber}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-white/30 mt-1">
+              Top-ups will be debited from this account automatically
+            </p>
           </div>
           <div>
             <label className={labelCls}>Opening Balance</label>

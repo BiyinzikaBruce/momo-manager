@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
       include: {
         mobileLine: {
           include: {
-            branch: { select: { id: true, name: true, country: true, currency: true } },
+            branch:      { select: { id: true, name: true, country: true, currency: true } },
+            bankAccount: { select: { id: true, bankName: true, accountNumber: true, balance: true } },
           },
         },
       },

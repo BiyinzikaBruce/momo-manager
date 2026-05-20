@@ -137,14 +137,16 @@ model verification {
 // ===== MOBILE MONEY MODELS =====
 
 model MobileLine {
-  id        String         @id @default(cuid())
-  operator  MobileOperator
-  branchId  String
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  operator      MobileOperator
+  branchId      String
+  bankAccountId String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   branch         Branch              @relation(fields: [branchId], references: [id])
+  bankAccount    BankAccount?        @relation(fields: [bankAccountId], references: [id])
   feeRates       FeeRate[]
   float          LineFloat?
   transactions   Transaction[]
@@ -188,7 +190,8 @@ model BankAccount {
   currency      String   @default("UGX")
   updatedAt     DateTime @updatedAt
 
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  mobileLines MobileLine[]
 }
 
 model Shift {

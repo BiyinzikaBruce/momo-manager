@@ -31,6 +31,44 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
+  const existing = await db.lineFloat.findUnique({
+    where: { id },
+    include: { mobileLine: { select: { bankAccountId: true } } },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const bankAccountId = existing.mobileLine.bankAccountId;
+
+  // If topping up and a bank account is linked, atomically debit the bank account
+  if (topUp !== undefined && bankAccountId) {
+    const bankAccount = await db.bankAccount.findUnique({ where: { id: bankAccountId } });
+    if (bankAccount && Number(bankAccount.balance) < topUp) {
+      return NextResponse.json(
+        { error: `Insufficient bank balance (${Number(bankAccount.balance).toLocaleString()} available)` },
+        { status: 422 }
+      );
+    }
+
+    const [float] = await db.$transaction([
+      db.lineFloat.update({
+        where: { id },
+        data: {
+          balance: { increment: topUp },
+          ...(lowThreshold !== undefined ? { lowThreshold } : {}),
+        },
+      }),
+      db.bankAccount.update({
+        where: { id: bankAccountId },
+        data: { balance: { decrement: topUp } },
+      }),
+    ]);
+
+    await invalidateTag(tags.float);
+    await invalidateTag(tags.bankAccount);
+    return NextResponse.json(float);
+  }
+
+  // Standard update (no bank account debit — direct balance set or no linked account)
   const float = await db.lineFloat.update({
     where: { id },
     data: {
@@ -38,9 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(balance !== undefined ? { balance }                       : {}),
       ...(lowThreshold !== undefined ? { lowThreshold }            : {}),
     },
-  }).catch(() => null);
-
-  if (!float) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  });
 
   await invalidateTag(tags.float);
   return NextResponse.json(float);

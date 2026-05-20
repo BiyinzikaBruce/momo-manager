@@ -94,6 +94,20 @@ export async function POST(req: NextRequest) {
   };
   const lim = limits[curr] ?? limits.UGX;
 
+  // If linked to a bank account with an opening balance, check sufficient funds
+  if (bankAccountId && openingBalance > 0) {
+    const bankAccount = await db.bankAccount.findUnique({ where: { id: bankAccountId } });
+    if (!bankAccount) {
+      return NextResponse.json({ error: "Bank account not found" }, { status: 404 });
+    }
+    if (Number(bankAccount.balance) < openingBalance) {
+      return NextResponse.json(
+        { error: `Insufficient bank balance (${Number(bankAccount.balance).toLocaleString()} available)` },
+        { status: 422 }
+      );
+    }
+  }
+
   const [line] = await db.$transaction([
     db.mobileLine.create({
       data: { id: lineId, branchId, operator, ...(bankAccountId ? { bankAccountId } : {}) },
@@ -113,9 +127,16 @@ export async function POST(req: NextRequest) {
         { mobileLineId: lineId, transactionType: "TRANSFER",   rateType: "PERCENTAGE", rate: tRate, minFee: lim.tMin, maxFee: lim.tMax },
       ],
     }),
+    ...(bankAccountId && openingBalance > 0
+      ? [db.bankAccount.update({
+          where: { id: bankAccountId },
+          data: { balance: { decrement: openingBalance } },
+        })]
+      : []),
   ]);
 
   await invalidateTag(tags.mobileLines);
   await invalidateTag(tags.float);
+  await invalidateTag(tags.bankAccount);
   return NextResponse.json(line, { status: 201 });
 }

@@ -120,6 +120,17 @@ body {
 
 ::selection { background: rgba(224, 64, 160, 0.25); color: #FFFFFF; }
 
+select {
+  background-color: #1c1c28;
+  color: #ffffff;
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1c1c28;
+  color: #ffffff;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

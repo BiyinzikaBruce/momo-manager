@@ -8,8 +8,12 @@ export const dynamic = "force-dynamic";
 
 const Schema = z.object({
   topUp:        z.number().positive("Amount must be positive").optional(),
+  balance:      z.number().min(0, "Balance cannot be negative").optional(),
   lowThreshold: z.number().min(0).nullable().optional(),
-});
+}).refine(
+  (d) => !(d.topUp !== undefined && d.balance !== undefined),
+  { message: "Use either topUp or balance, not both" }
+);
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireRole("ADMIN");
@@ -22,19 +26,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (parsed.data.topUp === undefined && parsed.data.lowThreshold === undefined) {
+  const { topUp, balance, lowThreshold } = parsed.data;
+  if (topUp === undefined && balance === undefined && lowThreshold === undefined) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const float = await db.lineFloat.update({
     where: { id },
     data: {
-      ...(parsed.data.topUp !== undefined
-        ? { balance: { increment: parsed.data.topUp } }
-        : {}),
-      ...(parsed.data.lowThreshold !== undefined
-        ? { lowThreshold: parsed.data.lowThreshold }
-        : {}),
+      ...(topUp   !== undefined ? { balance: { increment: topUp } } : {}),
+      ...(balance !== undefined ? { balance }                       : {}),
+      ...(lowThreshold !== undefined ? { lowThreshold }            : {}),
     },
   }).catch(() => null);
 

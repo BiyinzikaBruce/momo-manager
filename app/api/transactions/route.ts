@@ -161,10 +161,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Update float: DEPOSIT = agent sends e-money out (float decreases)
-  //              WITHDRAWAL = agent receives e-money in (float increases)
-  //              TRANSFER = agent sends e-money out (float decreases)
-  const floatDelta = type === "WITHDRAWAL" ? amount : -amount;
+  // Update float: DEPOSIT = money comes in (float increases)
+  //              WITHDRAWAL = money goes out (float decreases)
+  //              TRANSFER = money goes out (float decreases)
+  const floatDelta = type === "DEPOSIT" ? amount : -amount;
   const currentBalance = Number(line.float?.balance ?? 0);
   const newBalance = Math.max(0, currentBalance + floatDelta);
 

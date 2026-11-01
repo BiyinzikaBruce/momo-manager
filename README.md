@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# 📱 MoMo Manager
 
-First, run the development server:
+**Mobile money, managed.**
+
+Run a multi-branch mobile money business from one dashboard: float, shifts, transactions and staff, with a separate workspace for every role.
+
+![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma_7-2D3748?style=flat-square&logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
+
+</div>
+
+---
+
+## ✨ Why MoMo Manager
+
+Mobile money agents and businesses often track float, cash and commissions in notebooks or spreadsheets. MoMo Manager replaces that with live records per branch, per line and per shift, so owners always know where the money is.
+
+## 👥 Built for every role
+
+| Role | What they can do |
+|---|---|
+| **Admin / Owner** | Manage branches, mobile lines and users · monitor float across all lines · set fee rates · view every transaction and shift · export reports |
+| **Manager** | Oversee their branch · track float and shifts · review transactions · branch reports |
+| **Cashier** | Open and close a shift · record deposits and withdrawals · see their own transaction history |
+
+## 🚀 Features
+
+- 🏢 **Multi-branch:** run several outlets from one account
+- 📞 **Mobile lines:** track each MoMo/Airtel line and its float separately
+- 💰 **Float management:** line float and bank accounts, with snapshots at every shift
+- ⏱️ **Shifts:** open/close shifts with opening and closing balances per line
+- 🧾 **Transactions:** record, search and review every transaction, with fees calculated from fee rates
+- 📊 **Reports:** daily and branch reports, exportable to **Excel** and **PDF**
+- 🔔 **Notifications** and **email** alerts (Resend)
+- 🔐 **Role-based access** with Better Auth
+
+## 🛠️ Tech Stack
+
+| Layer | Tools |
+|---|---|
+| Framework | Next.js 16 (App Router), React 19, TypeScript |
+| Database | PostgreSQL + Prisma 7 |
+| Auth | Better Auth |
+| UI | Tailwind CSS 4, shadcn/ui, Radix, Lucide, Framer Motion |
+| Data | TanStack Query, TanStack Table, React Hook Form, Zod |
+| Services | Resend + React Email, Upstash Redis |
+| Exports | xlsx, @react-pdf/renderer |
+
+## ⚡ Getting Started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+git clone https://github.com/BiyinzikaBruce/momo-manager.git
+cd momo-manager
+pnpm install
+
+cp .env.example .env      # fill in your values
+pnpm db:push              # create the database tables
+pnpm db:seed              # optional: sample data
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [`.env.example`](./.env.example). You'll need `DATABASE_URL`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `UPSTASH_REDIS_URL`, `UPSTASH_REDIS_TOKEN` and `CRON_SECRET`.
 
-## Learn More
+📘 Not sure where to get these? See my [Environment Variables Cheatsheet](https://biyinzikabruce.github.io/env-cheatsheet/).
 
-To learn more about Next.js, take a look at the following resources:
+### Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Start the dev server |
+| `pnpm build` | Production build |
+| `pnpm db:push` | Sync the Prisma schema to the database |
+| `pnpm db:seed` | Seed sample data |
+| `pnpm db:reset` | Reset the database and re-seed |
+| `pnpm db:studio` | Open Prisma Studio |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📁 Project Structure
 
-## Deploy on Vercel
+```
+app/
+  (admin)/dashboard/   # owner: branches, lines, float, shifts, users, reports
+  (manager)/manager/   # branch manager workspace
+  (cashier)/cashier/   # cashier: shift + transactions
+  api/                 # route handlers
+components/            # UI components
+emails/                # React Email templates
+lib/                   # auth, db, utils
+prisma/                # schema + seed
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<div align="center">
+
+Built by **[Biyinzika Bruce](https://github.com/BiyinzikaBruce)** · Tech Power Africa
+
+</div>

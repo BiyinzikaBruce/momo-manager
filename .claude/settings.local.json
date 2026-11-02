@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"Today.*sales\\\\|Low stock\\\\|alert\" \"/a/pos system trial\" --include=\"*.html\" --include=\"*.py\" 2>/dev/null | head -20)",
+      "Read(//a/pos system trial/**)"
+    ]
+  }
+}
